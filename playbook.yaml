@@ -1,0 +1,129 @@
+---
+- hosts: all
+  gather_facts: false
+  tags:
+    - ping
+  tasks:
+    - ping:
+
+- name: stop elasticsearch
+  hosts: all
+  tasks:
+
+    - name: stop elasticsearch.service
+      shell: systemctl stop elasticsearch.service
+    - name: disable elasticsearch.service
+      shell: systemctl disable elasticsearch.service
+      register: output
+    - debug:
+        var: output.stdout_lines
+        verbosity: 2
+
+    - name: check_task
+      shell: "if ! systemctl is-active elasticsearch.service; then  echo 'inactive' ; fi"
+      register: elasticsearch
+      failed_when: False
+      changed_when: "'already not running in elasticsearch.service.stdout'"
+    - name: elastic status
+      ansible.builtin.service:
+        name: elasticsearch.service
+        enabled: false
+    - debug:
+        verbosity: 2
+        msg: "'*************elasticsearch.service disable**************'"
+
+    - name: apt-get
+      shell: apt-get upgrade logstash -y && apt-get upgrade elasticsearch
+    - name: daemon-reload
+      shell: systemctl daemon-reload
+    - name: enable elasticsearch service
+      shell: systemctl enable elasticsearch.service
+    - name: start elastic search
+      shell: systemctl start elasticsearch.service
+    - name: just exec status elasticsearch
+      shell: systemctl status elasticsearch.service
+      register: output
+    - debug:
+        var: output.stdout_lines
+      become: yes
+      become_user: root
+   
+    - name: upgrade kibana
+      shell: apt upgrade kibana
+    - name: service restart
+      shell: service kibana restart
+      register: output
+    - debug:
+        var: output.stdout_lines
+      become: yes
+      become_user: root 
+
+    - name: restart logstash
+      shell: systemctl restart logstash.service
+    - name: service status
+      shell: systemctl status logstash.service
+      register: output
+    - debug:
+        var: output.stdout_lines
+      become: yes
+      become_user: root
+     
+- name:  update auditbeat service
+  hosts: all
+  tasks:
+    - name: stop auditbeat.service
+      shell: systemctl stop auditbeat.service
+    - name: disable auditbeat.service
+      shell: systemctl stop auditbeat.service
+    - name: disable auditbeat.service
+      shell: systemctl disable auditbeat.service
+    - name: apt
+      shell: apt-get upgrade auditbeat -y
+    - name: enable auditbeat service
+      shell: systemctl enable auditbeat.service
+    - name: start auditbeat
+      shell: systemctl start auditbeat.service
+    - name: verify error occured
+      shell: echo $?
+    - name : check version
+      shell: /usr/bin/auditbeat version
+      register: result
+    - debug:
+        var: output.stdout_lines
+      become: yes
+      become_user: root
+      
+- name: update filebeat
+  hosts: all
+  tasks:
+    - name: stop auditbeat.service
+      shell: systemctl stop filebeat.service
+    - name: disable auditbeat.service
+      shell: systemctl disable filebeat.service
+    - name: apt
+      shell: apt-get upgrade filebeat -y
+    - name: enable filebeat service
+      shell:  systemctl enable filebeat.service
+    - name: start auditbeat
+      shell: systemctl start filebeat.service
+    - name: verify error occured
+      shell: echo $?
+    - name: check version
+      shell: /usr/bin/filebeat version
+      register: result
+    - debug:
+        var: output.stdout_lines
+      become: yes
+      become_user: root
+    - name: stop service elastic-agent
+      shell: systemctl stop elastic-agent && systemctl disable elastic-agent
+    - name: upgrade elk agent 7.15.1
+      shell: apt upgrade elastic-agent=7.15.1 -y
+    - name: enable and start elastic-agent
+      shell: systemctl enable elastic-agent && systemctl start elastic-agent
+      register: result
+    - debug:
+        var: output.stdout_lines
+      become: yes
+      become_user: root
+      
