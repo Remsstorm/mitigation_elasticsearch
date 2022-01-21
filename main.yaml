@@ -1,0 +1,4 @@
+- name: update elastic
+  import_playbook: playbook.yaml
+- name: horodatage mitigation
+  import_playbook: horodatage.yaml
